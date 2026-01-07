@@ -1,0 +1,74 @@
+projectName: UUPS Proxy Contract System
+projectDescription: Production-grade upgradeable smart contract system implementing a TokenVault protocol
+authorName: Harshitha Pasumarthi
+repoUrl: https://github.com/harshitha1246/uups-proxy-contract-system
+mainBranch: main
+completionStatus: completed
+features:
+  - v1BasicVault: true
+  - v2YieldGeneration: true
+  - v3WithdrawalDelays: true
+contracts:
+  - name: TokenVaultV1
+    path: contracts/TokenVaultV1.sol
+    functions:
+      - initialize
+      - deposit
+      - withdraw
+      - balanceOf
+      - totalDeposits
+      - getDepositFee
+      - getImplementationVersion
+  - name: TokenVaultV2
+    path: contracts/TokenVaultV2.sol
+    inheritFrom: TokenVaultV1
+    functions:
+      - setYieldRate
+      - getYieldRate
+      - claimYield
+      - getUserYield
+      - pauseDeposits
+      - unpauseDeposits
+      - isDepositsPaused
+  - name: TokenVaultV3
+    path: contracts/TokenVaultV3.sol
+    inheritFrom: TokenVaultV2
+    functions:
+      - emergencyWithdraw
+      - setWithdrawalDelay
+      - getWithdrawalDelay
+      - requestWithdrawal
+      - executeWithdrawal
+      - getWithdrawalRequest
+  - name: MockERC20
+    path: contracts/mocks/MockERC20.sol
+testFiles:
+  - test/TokenVaultV1.test.js
+  - test/upgrade-v1-to-v2.test.js
+  - test/upgrade-v2-to-v3.test.js
+  - test/security.test.js
+deploymentScripts:
+  - scripts/deploy-v1.js
+  - scripts/upgrade-to-v2.js
+  - scripts/upgrade-to-v3.js
+keySecurity:
+  - storageGaps: true
+  - roleBasedAccess: true
+  - initializerSecurity: true
+  - uupsPattern: true
+tools:
+  - Hardhat
+  - Ethers.js
+  - OpenZeppelin Contracts Upgradeable
+  - Chai
+evaluationCriteria:
+  - allContractsDeployed: true
+  - storageIntegrity: true
+  - secureInitialization: true
+  - accessControl: true
+  - businessLogic: true
+  - statePreservation: true
+  - comprehensiveTests: true
+  - securityHardening: true
+  - productionReadiness: true
+  - deploymentScripts: true
