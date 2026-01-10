@@ -10,11 +10,15 @@
     "upgrade:v3": "hardhat run scripts/upgrade-to-v3.js --network localhost"
   },
   "devDependencies": {
-    "@openzeppelin/contracts": "^5.0.0",
-    "@openzeppelin/contracts-upgradeable": "^5.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@openzeppelin/hardhat-upgrades": "^3.0.0",
     "chai": "^4.3.8",
     "ethers": "^6.8.0",
-    "hardhat": "^2.19.0"
+    "hardhat": "^2.28.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.6",
+    "@openzeppelin/contracts-upgradeable": "^4.9.6",
+    "dotenv": "^17.2.3"
   }
 }

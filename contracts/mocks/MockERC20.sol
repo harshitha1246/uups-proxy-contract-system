@@ -6,11 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract MockERC20 is ERC20 {
     constructor() ERC20("Mock Token", "MOCK") {}
 
-    function mint(address to, uint256 amount) public {
+    function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
 
-    function burn(address from, uint256 amount) public {
-        _burn(from, amount);
+    function decimals() public pure override returns (uint8) {
+        return 18;
     }
 }

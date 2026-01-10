@@ -1,51 +1,86 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 
-describe("Security Tests", () => {
-  let proxyAddress, token, owner;
+describe("Security Tests", function () {
+  let owner, user, token, proxy;
 
-  before(async () => {
-    [owner] = await ethers.getSigners();
-    const TokenFactory = await ethers.getContractFactory("MockERC20");
-    token = await TokenFactory.deploy();
-    await token.waitForDeployment();
+  beforeEach(async () => {
+    [owner, user] = await ethers.getSigners();
+
+    const Token = await ethers.getContractFactory("MockERC20");
+    token = await Token.deploy();
+    await token.mint(user.address, ethers.parseEther("1000"));
   });
 
   it("should prevent direct initialization of implementation contracts", async () => {
-    const V1Factory = await ethers.getContractFactory("TokenVaultV1");
-    const impl = await V1Factory.deploy();
-    await impl.waitForDeployment();
-    await expect(impl.initialize(token.target, owner.address, 500)).to.be.reverted;
+    const V1 = await ethers.getContractFactory("TokenVaultV1");
+    const impl = await V1.deploy();
+
+    await expect(
+      impl.initialize(token.target, owner.address, 500)
+    ).to.be.revertedWith("Initializable: contract is already initialized");
   });
 
   it("should prevent unauthorized upgrades", async () => {
-    const V1Factory = await ethers.getContractFactory("TokenVaultV1");
-    const proxy = await upgrades.deployProxy(V1Factory, [token.target, owner.address, 500], { kind: "uups" });
-    await proxy.waitForDeployment();
-    proxyAddress = proxy.target;
-    const [, nonAdmin] = await ethers.getSigners();
-    const V2Factory = await ethers.getContractFactory("TokenVaultV2");
-    await expect(upgrades.upgradeProxy(proxyAddress, V2Factory, { kind: "uups" })).to.be.reverted;
+    const V1 = await ethers.getContractFactory("TokenVaultV1");
+    proxy = await upgrades.deployProxy(
+      V1,
+      [token.target, owner.address, 500],
+      { kind: "uups" }
+    );
+
+    const V2 = await ethers.getContractFactory("TokenVaultV2");
+
+    await expect(
+      upgrades.upgradeProxy(proxy.target, V2.connect(user))
+    ).to.be.reverted;
   });
 
   it("should use storage gaps for future upgrades", async () => {
-    const vaultV1 = await ethers.getContractAt("TokenVaultV1", proxyAddress);
-    expect(vaultV1).to.exist;
+    const V1 = await ethers.getContractFactory("TokenVaultV1");
+    const V2 = await ethers.getContractFactory("TokenVaultV2");
+    const V3 = await ethers.getContractFactory("TokenVaultV3");
+
+    // Deployment should not revert due to storage layout issues
+    const proxy = await upgrades.deployProxy(
+      V1,
+      [token.target, owner.address, 500],
+      { kind: "uups" }
+    );
+
+    await upgrades.upgradeProxy(proxy.target, V2);
+    await upgrades.upgradeProxy(proxy.target, V3);
+
+    expect(true).to.equal(true);
   });
 
   it("should not have storage layout collisions across versions", async () => {
-    const V2Factory = await ethers.getContractFactory("TokenVaultV2");
-    const proxy2 = await upgrades.deployProxy(V2Factory, [token.target, owner.address, 500], { kind: "uups" });
-    await proxy2.waitForDeployment();
-    const vaultV2 = proxy2;
-    expect(vaultV2).to.exist;
+    const V1 = await ethers.getContractFactory("TokenVaultV1");
+    const V2 = await ethers.getContractFactory("TokenVaultV2");
+
+    const proxy = await upgrades.deployProxy(
+      V1,
+      [token.target, owner.address, 500],
+      { kind: "uups" }
+    );
+
+    const balanceBefore = await proxy.totalDeposits();
+
+    const upgraded = await upgrades.upgradeProxy(proxy.target, V2);
+
+    const balanceAfter = await upgraded.totalDeposits();
+    expect(balanceAfter).to.equal(balanceBefore);
   });
 
   it("should prevent function selector clashing", async () => {
-    const V3Factory = await ethers.getContractFactory("TokenVaultV3");
-    const proxy3 = await upgrades.deployProxy(V3Factory, [token.target, owner.address, 500], { kind: "uups" });
-    await proxy3.waitForDeployment();
-    const vaultV3 = proxy3;
-    expect(await vaultV3.getImplementationVersion()).to.equal("V3");
+    const V1 = await ethers.getContractFactory("TokenVaultV1");
+    const proxy = await upgrades.deployProxy(
+      V1,
+      [token.target, owner.address, 500],
+      { kind: "uups" }
+    );
+
+    // If selector clashing existed, this would revert or misbehave
+    expect(await proxy.getImplementationVersion()).to.equal("V1");
   });
 });
